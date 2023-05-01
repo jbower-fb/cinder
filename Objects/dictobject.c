@@ -5440,7 +5440,7 @@ _PyObject_StoreInstanceAttribute(PyObject *obj, PyDictValues *values,
         if (dict == NULL) {
             return -1;
         }
-        _PyObject_DictOrValuesPointer(obj)->dict = dict;
+        _PyDictOrValues_SetDict(_PyObject_DictOrValuesPointer(obj), dict);
         if (value == NULL) {
             return PyDict_DelItem(dict, name);
         }
@@ -5465,6 +5465,7 @@ _PyObject_StoreInstanceAttribute(PyObject *obj, PyDictValues *values,
         }
         Py_DECREF(old_value);
     }
+    PyType_Modified(Py_TYPE(obj));
     return 0;
 }
 
@@ -5625,7 +5626,7 @@ PyObject_GenericGetDict(PyObject *obj, void *context)
             dict = make_dict_from_instance_attributes(
                     interp, CACHED_KEYS(tp), values);
             if (dict != NULL) {
-                dorv_ptr->dict = dict;
+                _PyDictOrValues_SetDict(dorv_ptr, dict);
             }
         }
         else {
@@ -5680,11 +5681,17 @@ _PyObjectDict_SetItem(PyTypeObject *tp, PyObject **dictptr,
                 return -1;
             *dictptr = dict;
         }
+        int all_instances_share_keys = !(tp->tp_flags & Py_TPFLAGS_NOT_ALL_INSTANCES_USE_SHARED_DICT_KEYS);
         if (value == NULL) {
             res = PyDict_DelItem(dict, key);
         }
         else {
             res = PyDict_SetItem(dict, key, value);
+        }
+        if (all_instances_share_keys && cached != ((PyDictObject*)*dictptr)->ma_keys) {
+            assert("set item broke sharing");
+            tp->tp_flags |= Py_TPFLAGS_NOT_ALL_INSTANCES_USE_SHARED_DICT_KEYS;
+            PyType_Modified(tp);
         }
     } else {
         dict = *dictptr;

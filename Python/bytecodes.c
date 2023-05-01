@@ -2429,10 +2429,12 @@ dummy_func(
             DEOPT_IF(self_cls->tp_version_tag != type_version, LOAD_ATTR);
             assert(self_cls->tp_flags & Py_TPFLAGS_MANAGED_DICT);
             PyDictOrValues dorv = *_PyObject_DictOrValuesPointer(self);
-            DEOPT_IF(!_PyDictOrValues_IsValues(dorv), LOAD_ATTR);
+            // DEOPT_IF(!_PyDictOrValues_IsValues(dorv), LOAD_ATTR);
+            assert(_PyDictOrValues_IsValues(dorv));
             PyHeapTypeObject *self_heap_type = (PyHeapTypeObject *)self_cls;
-            DEOPT_IF(self_heap_type->ht_cached_keys->dk_version !=
-                     keys_version, LOAD_ATTR);
+            // DEOPT_IF(self_heap_type->ht_cached_keys->dk_version !=
+            //          keys_version, LOAD_ATTR);
+            assert(self_heap_type->ht_cached_keys->dk_version == keys_version);
             STAT_INC(LOAD_ATTR, hit);
             assert(descr != NULL);
             res2 = Py_NewRef(descr);
